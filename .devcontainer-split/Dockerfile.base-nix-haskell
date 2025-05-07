@@ -1,0 +1,21 @@
+FROM nixos/nix AS builder
+
+RUN mkdir /workspace
+
+WORKDIR /workspace
+
+COPY flake.nix ./flake.nix
+
+ARG NIX_CONFIG
+
+ENV NIX_CONFIG=${NIX_CONFIG}
+
+RUN nix --extra-experimental-features nix-command --extra-experimental-features flakes flake update
+
+RUN nix --extra-experimental-features nix-command --extra-experimental-features flakes build .#test
+
+#RUN $(nix --extra-experimental-features nix-command --extra-experimental-features flakes build .#test --show-trace --no-link --print-out-paths)
+
+#CMD [ "cat" "./result" ]
+
+CMD ["sleep", "infinity"]

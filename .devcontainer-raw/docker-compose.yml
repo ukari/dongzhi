@@ -1,0 +1,18 @@
+services:
+  haskell-dev:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      args:
+        - GHC_VERSION=9.6.6
+        - STACK_RESOLVER=lts-22.43
+        - HLS_VERSION=2.9.0.1
+    image: haskell-dev:latest
+    container_name: haskell-dev
+    network_mode: "host"
+    tmpfs: 
+      - /tmp:exec,mode=1777
+    volumes:
+      - ..:/workspace
+    entrypoint: sleep infinity
+

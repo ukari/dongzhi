@@ -1,0 +1,9 @@
+services:
+  base-nix-haskell-builder:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.base-nix-haskell
+      # args:
+      #   - NIX_CONFIG=access-tokens = github.com=ghp_
+    image: base-nix-haskell-builder
+    container_name: base-nix-haskell-builder

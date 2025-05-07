@@ -1,0 +1,13 @@
+services:
+  haskell-dev:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      args:
+        - STACK_RESOLVER=lts-22.37
+    image: haskell-dev
+    container_name: haskell-dev
+    tmpfs: 
+      - /tmp:exec,mode=1777
+    volumes:
+      - ..:/workspace

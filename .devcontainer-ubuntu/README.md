@@ -1,0 +1,1 @@
+ubuntu base image, from https://github.com/vzarytovskii/haskell-dev-env

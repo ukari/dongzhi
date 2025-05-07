@@ -1,0 +1,51 @@
+{
+    "name": "haskell",
+    "dockerComposeFile": "docker-compose.yml",
+    "service": "haskell-dev",
+    "workspaceFolder": "/workspace",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "haskell.haskell",
+                "phoityne.phoityne-vscode",
+                "eriksik2.vscode-ghci",
+                "jcanero.hoogle-vscode"
+            ],
+            "settings": {
+                "workbench.colorCustomizations": {
+                    "titleBar.activeBackground": "#19549C",
+                    "titleBar.activeForeground": "#ffffff",
+                    "activityBar.background": "#02A7E3",
+                    "activityBar.foreground": "#ffffff"
+                }
+            },
+            "files.exclude": {
+                "**/*.olean": true,
+                "**/.DS_Store": true,
+                "**/.git": true,
+                "**/.hg": true,
+                "**/.svn": true,
+                "**/CVS": true
+            },
+            "haskell.checkProject": true,
+            "haskell.formattingProvider": "ormolu",
+            "haskell.indentationRules.enabled": true,
+            "haskell.liquidOn": false,
+            "haskell.checkParents": "CheckOnSave",
+            "haskell.manageHLS": "GHCup",
+            "haskell.maxCompletions": 40,
+            "haskell.openDocumentationInHackage": false,
+            "haskell.openSourceInHackage": false,
+            "haskell.trace.client": "error",
+            "haskell.trace.server": "off",
+            "haskell.upgradeGHCup": true,
+            "hoogle-vscode.useCabalDependencies": true
+        }
+    },
+    "updateRemoteUserUID": true,
+    "remoteUser": "dev",
+    "containerEnv": {
+        "SHELL": "/bin/bash"
+    },
+    "initializeCommand": ["/bin/sh", "-c", "cd .devcontainer && $(nix build .#test --show-trace --no-link --print-out-paths)|docker load"]
+}

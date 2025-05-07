@@ -1,0 +1,11 @@
+services:
+  base-nix-haskell-builder:
+    build:
+      context: .
+      dockerfile: ./Dockerfile-base-build
+      args:
+        - NIX_CONFIG=$NIX_CONFIG
+    image: base-nix-haskell-builder
+    container_name: base-nix-haskell-builder
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
