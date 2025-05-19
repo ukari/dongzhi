@@ -103,6 +103,7 @@
 
             commonRuntime = with pkgs; [
                 git
+                openssh
             ];
 
 
