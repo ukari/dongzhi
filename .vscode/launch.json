@@ -4,20 +4,20 @@
         {
             "type": "ghc",
             "request": "launch",
-            "name": "haskell-debug-adapter",
+            "name": "debug",
             "internalConsoleOptions": "openOnSessionStart",
-            "workspace": "${workspaceRoot}",
+            "workspace": "${workspaceFolder}/helloworld",
             "startup": "/workspace/helloworld/src/Lib.hs",
             "startupFunc": "someFunc",
             "startupArgs": "",
             "stopOnEntry": false,
             "mainArgs": "",
             "ghciPrompt": "H>>= ",
-            "ghciInitialPrompt": "Prelude>",
-            "ghciCmd": "stack ghci --test --no-load --no-build --main-is TARGET --ghci-options -fprint-evld-with-show",
+            "ghciInitialPrompt": "ghci>",
+            "ghciCmd": "stack ghci --with-ghc=ghci-dap --no-load --no-build --main-is helloworld --ghci-options -fprint-evld-with-show",
             "ghciEnv": {},
-            "logFile": "${workspaceRoot}/.vscode/phoityne.log",
-            "logLevel": "WARNING",
+            "logFile": "${workspaceFolder}/.vscode/phoityne.log",
+            "logLevel": "DEBUG",
             "forceInspect": true
         }
     ]

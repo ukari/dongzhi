@@ -1,0 +1,1 @@
+`$(nix --extra-experimental-features nix-command --extra-experimental-features flakes build .#hoogle-prefetch --show-trace --no-link --print-out-paths) | docker load && $(nix --extra-experimental-features nix-command --extra-experimental-features flakes build .#base-nix-haskell --show-trace --no-link --print-out-paths) | docker load`

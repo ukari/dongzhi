@@ -65,7 +65,7 @@
     {
         "label": "Start Hoogle server",
         "type": "shell",
-        "command": "stack hoogle --server",
+        "command": "stack hoogle -- server --local --port 48080",
         "presentation": {
             "reveal": "never",
             "panel": "dedicated"

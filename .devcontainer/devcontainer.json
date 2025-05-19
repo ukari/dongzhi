@@ -10,6 +10,8 @@
                 "phoityne.phoityne-vscode",
                 "eriksik2.vscode-ghci",
                 "jcanero.hoogle-vscode",
+
+                "visortelle.haskell-spotlight",
                 "github.copilot"
             ],
             "settings": {
@@ -38,6 +40,7 @@
                 "haskell.trace.client": "error",
                 "haskell.trace.server": "off",
                 "haskell.upgradeGHCup": false,
+                "hoogle-vscode.url": "http://127.0.0.1:48080",
                 "hoogle-vscode.useCabalDependencies": true
             },
             "files.exclude": {

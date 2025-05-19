@@ -12,3 +12,6 @@ bash-5.2# readelf -l /.stack/programs/x86_64-linux/ghc-9.6.6/lib/ghc-9.6.6/bin/g
 crane 解压？ `crane export - fs.tar < test.tar.gz`
 https://labs.iximiuz.com/tutorials/extracting-container-image-filesystem
 skopeo
+
+# ghc编译的可执行文件的大小的影响因素
+https://stackoverflow.com/questions/6115459/small-haskell-program-compiled-with-ghc-into-huge-binary

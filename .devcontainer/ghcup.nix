@@ -7,10 +7,10 @@
 let
     pname = "ghcup";
     version = "0.1.40.0";
-    installScript = fetchurl {
-        url = "https://get-ghcup.haskell.org";
-        sha256 = "13yj52vc3ghjdshshhrp07jpxjdy1rgsmj7sqwn2y8nbdc8and1k";
-    };
+    # installScript = fetchurl {
+    #     url = "https://get-ghcup.haskell.org";
+    #     sha256 = "13yj52vc3ghjdshshhrp07jpxjdy1rgsmj7sqwn2y8nbdc8and1k";
+    # };
     sources = {
         x86_64-linux = fetchurl {
             url = "https://downloads.haskell.org/~ghcup/${version}/x86_64-linux-ghcup-${version}";

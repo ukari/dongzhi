@@ -271,7 +271,7 @@
                     nix-ld-libraries 
                     nix-ld-ldso
                     env-usr-bin # devcontainer script needs /usr/bin/env
-                    #etc-profile # devcontainer needs /etc/profile
+                    etc-profile # devcontainer needs /etc/profile
                     ghcup-profile
                     global-stack-config
                     std-cacert-install

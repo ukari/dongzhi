@@ -1,22 +1,22 @@
-FROM alpine AS hoogle-prefetch
+# FROM alpine AS hoogle-prefetch
 
-WORKDIR /download
+# WORKDIR /download
 
-RUN apk add --no-cache wget
+# RUN apk add --no-cache wget
 
-RUN wget -O input-haskell-stackage-lts.txt https://www.stackage.org/lts/cabal.config
+# RUN wget -O input-haskell-stackage-lts.txt https://www.stackage.org/lts/cabal.config
 
-RUN wget -O input-haskell-stackage-nightly.txt https://www.stackage.org/nightly/cabal.config
+# RUN wget -O input-haskell-stackage-nightly.txt https://www.stackage.org/nightly/cabal.config
 
-RUN wget -O input-haskell-platform.txt https://raw.githubusercontent.com/haskell/haskell-platform/master/hptool/src/Releases2015.hs
+# RUN wget -O input-haskell-platform.txt https://raw.githubusercontent.com/haskell/haskell-platform/master/hptool/src/Releases2015.hs
 
-RUN wget -O input-haskell-cabal.tar.gz https://hackage.haskell.org/packages/index.tar.gz
+# RUN wget -O input-haskell-cabal.tar.gz https://hackage.haskell.org/packages/index.tar.gz
 
-RUN wget -O input-haskell-hoogle.tar.gz https://hackage.haskell.org/packages/hoogle.tar.gz
+# RUN wget -O input-haskell-hoogle.tar.gz https://hackage.haskell.org/packages/hoogle.tar.gz
 
-CMD ["tail", "-f", "/dev/null"]
+# CMD ["tail", "-f", "/dev/null"]
 
-FROM base-nix-haskell:latest AS dev
+FROM base-nix-haskell:latest
 
 USER dev
 
@@ -47,17 +47,17 @@ ENV GHC_VERSION=${GHC_VERSION} \
 #     echo '  OwnSource:' >> ~/.ghcup/config.yaml && \
 #     echo '    - https://mirrors.ustc.edu.cn/ghcup/ghcup-metadata/ghcup-latest.yaml' >> ~/.ghcup/config.yaml
 
-RUN echo "export PATH=~/.ghcup/bin:$PATH" >> ~/.bashrc
+# RUN echo "export PATH=~/.ghcup/bin:$PATH" >> ~/.bashrc
 
-RUN mkdir -p ~/.ghcup &&\
-    touch ~/.ghcup/config.yaml && \
-    echo 'url-source:' >> ~/.ghcup/config.yaml && \
-    echo '  OwnSource:' >> ~/.ghcup/config.yaml && \
-    echo '    - https://mirrors.ustc.edu.cn/ghcup/ghcup-metadata/ghcup-latest.yaml' >> ~/.ghcup/config.yaml
+# RUN mkdir -p ~/.ghcup &&\
+#     touch ~/.ghcup/config.yaml && \
+#     echo 'url-source:' >> ~/.ghcup/config.yaml && \
+#     echo '  OwnSource:' >> ~/.ghcup/config.yaml && \
+#     echo '    - https://mirrors.ustc.edu.cn/ghcup/ghcup-metadata/ghcup-latest.yaml' >> ~/.ghcup/config.yaml
 
-SHELL ["/bin/bash", "-c"]
+# SHELL ["/bin/bash", "-c"]
 
-ENV BASH_ENV="~/.bashrc"
+# ENV BASH_ENV="~/.bashrc"
 
 # RUN --mount=type=tmpfs,target=/tmp ghcup install cabal latest --set
 
@@ -70,16 +70,27 @@ RUN --mount=type=tmpfs,target=/tmp ghcup install hls ${HLS_VERSION} --set
 RUN ((stack ghc -- --version 2>/dev/null) || true) && \
     stack config --system-ghc set resolver ${STACK_RESOLVER}
 
+ADD --chmod=777 ./phoityne-vscode-init.sh ./phoityne-vscode-init.sh
+
+RUN --mount=type=tmpfs,target=/tmp ./phoityne-vscode-init.sh ~/.ghcup/bin ~/.local/bin && \
+    rm -rf ./phoityne-vscode-init.sh
+
 RUN mkdir -p ~/download
 
-COPY --from=hoogle-prefetch /download/* ./download
+COPY --from=hoogle-prefetch /cache/* ./download
 
-RUN HOOGLE_ROOT=$(stack path --local-hoogle-root) && \
-    mkdir -p ${HOOGLE_ROOT} && \
-    touch ${HOOGLE_ROOT}/database.hoo && \
-    mv ./download/* ${HOOGLE_ROOT} && \
-    rm -rf ./download
+ADD --chmod=777 ./hoogle-init.sh ./hoogle-init.sh
 
-# RUN --mount=type=tmpfs,target=/tmp stack hoogle -- generate
+RUN --mount=type=tmpfs,target=/tmp ./hoogle-init.sh ~/.ghcup/bin ~/download && \
+    rm -rf ./download && \
+    rm -rf /home/dev/hoogle-init.sh
+
+# RUN HOOGLE_ROOT=$(stack path --local-hoogle-root) && \
+#     mkdir -p ${HOOGLE_ROOT} && \
+#     touch ${HOOGLE_ROOT}/database.hoo && \
+#     mv ./download/* ${HOOGLE_ROOT} && \
+#     rm -rf ./download
+
+#RUN --mount=type=tmpfs,target=/tmp stack hoogle -- generate
 
 CMD ["/bin/bash"]

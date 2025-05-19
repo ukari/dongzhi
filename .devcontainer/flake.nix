@@ -3,10 +3,9 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-    nix2container.url = "github:nlewo/nix2container";
   };
 
-  outputs = { self, nixpkgs, flake-utils, nix2container }: flake-utils.lib.eachDefaultSystem (
+  outputs = { self, nixpkgs, flake-utils }: flake-utils.lib.eachDefaultSystem (
       system:
         let 
             pkgs = import nixpkgs {
@@ -14,12 +13,14 @@
                 overlays = [
                     (final: prev: {
                         ghcup = prev.callPackage ./ghcup.nix {};
+                        hoogle-prefetch = prev.callPackage ./hoogle-prefetch.nix {};
                     }) 
                 ];
             };
             uid = 2000;
             gid = 2000;
             user = "dev";
+            group = user;
 
             glibcUseSystemLdSoCache = with pkgs; glibc.overrideAttrs (oldAttrs: {
                 patches = lib.filter (p: !(builtins.baseNameOf p == "dont-use-system-ld-so-cache.patch")) oldAttrs.patches;
@@ -54,25 +55,34 @@
                 iproute2
                 which
                 nano
+                unixtools.procps
+                psmisc
             ];
 
-            devtoolPackages = map (pkg: pkgs.haskell.lib.justStaticExecutables pkg) (with pkgs.haskellPackages; [
+            phoityneVscodeDependencies = with pkgs.haskellPackages; [
+                #haskell-dap, manage by stack
+                #ghci-dap, manage by stack
+                haskell-debug-adapter
+            ];
+
+            devtoolPackages = map (pkg: pkgs.haskell.lib.justStaticExecutables pkg) (
+                (with pkgs.haskellPackages; [
                 # fsnotify
-                # haskell-dap
                 # ghci-dap
-                # haskell-debug-adapter
                 # hlint
                 # apply-refact
                 # retrie
                 hoogle
                 # ormolu
-            ]);
+                ])
+                ++ phoityneVscodeDependencies
+            );
 
             devcontainerEnvironment = with pkgs; [
                 gzip
                 (fakeNss.override {
                     extraPasswdLines = ["${user}:x:${builtins.toString uid}:${builtins.toString gid}:developer:/home/${user}:/bin/sh"];
-                    extraGroupLines = ["${user}:x:${builtins.toString gid}:"];
+                    extraGroupLines = ["${group}:x:${builtins.toString gid}:"];
                 }) # devcontainer needs root user
                 stdenv.cc.cc.lib # libstdc++.so.6 for devcontainer script check requirements
                 (runCommand "create-user-home" {} ''
@@ -95,13 +105,20 @@
                 git
             ];
 
+
+            osReleaseFile = ''
+                ID=nix
+            '';
+
             globalStackConfigFile = ''
                 # stackage
-                setup-info-locations: ["https://mirrors.tuna.tsinghua.edu.cn/stackage/stack-setup.yaml"]
+                setup-info-locations:
+                    - http://mirrors.ustc.edu.cn/stackage/stack-setup.yaml
                 urls:
-                    latest-snapshot: https://mirrors.tuna.tsinghua.edu.cn/stackage/snapshots.json
-
-                snapshot-location-base: https://mirrors.tuna.tsinghua.edu.cn/stackage/stackage-snapshots/
+                    latest-snapshot: http://mirrors.ustc.edu.cn/stackage/snapshots.json
+                snapshot-location-base: http://mirrors.ustc.edu.cn/stackage/stackage-snapshots/
+                global-hints-location:
+                    url: https://mirrors.ustc.edu.cn/stackage/stackage-content/stack/global-hints.yaml
 
                 #ghc-options:
                 #  "$everything": -haddock
@@ -131,53 +148,104 @@
 
             '';
 
-            globalStackConfigHintFile = ''
-                https://mirrors.tuna.tsinghua.edu.cn/github-raw/fpco/stackage-content/master/stack/global-hints.yaml
+            stackUserProfile = ''
+                export PATH=~/.local/bin:$PATH
             '';
 
-            writeFile = {content, destination, isOverwrite ? true, mode ? "644"} : with pkgs; buildEnv {
-                name = "write-file";
-                pathsToLink = [ ];
-                paths = [];
-                postBuild = let
-                    directory = dirOf destination;
-                in ''
+            ghcupUserProfile = ''
+                export PATH=~/.ghcup/bin:$PATH
+            '';
+
+            ghcupConfigFile = ''
+                url-source:
+                  OwnSource:
+                    - https://mirrors.ustc.edu.cn/ghcup/ghcup-metadata/ghcup-latest.yaml
+            '';
+
+            makeFile = {content, destination, isOverwrite ? true, mode ? "644", dirMode ? "755", owner ? "root", group ? "root"} : with pkgs; let
+                directory = dirOf destination;
+                derivation = runCommand "write-file" {}''
                     mkdir -p $out${directory}
-                    if [ "${builtins.toString isOverwrite}" = "true" ]; then
-                        cat <<'EOF' > $out${destination}
+                    cat <<'EOF' > $out${destination}
                     ${content}
                     EOF
-                    else
-                        cat <<'EOF' >> $out${destination}
-                    ${content}
-                    EOF
-                    fi
-                    chmod ${mode} $out${destination}
                 '';
-            };
+            in ({
+                    inherit isOverwrite;
+                    inherit mode;
+                    inherit dirMode;
+                    inherit owner;
+                    inherit group;
+                    path = derivation;
+                });
 
-            global-stack-config = map writeFile [
-                ({
-                    content = globalStackConfigFile;
-                    destination = "/home/${user}/.stack/config.yaml";
-                    isOverwrite = false;
-                })
-                ({
-                    content = globalStackConfigHintFile;
-                    destination = "/home/${user}/.stack/pantry/global-hints-cache.yaml";
-                    isOverwrite = false;
-                })
-            ];
+            writeInstallPathScript = name : metas : with pkgs; let 
+                makeScript = { path, isOverwrite ? true, mode ? "644", dirMode ? "755", owner ? "root", group ? "root" } : ''
+                    export base=${path} dest_base=/
+                    cd $base
+                    find ./ -type f -exec sh -c -- '
+                        export target=$0
+                        export dir=$(dirname $target)
+                        cd $dest_base
+                        if [ ! -d "$dir" ]; then
+                          install -d -m ${dirMode} -o ${owner} -g ${group} $dir
+                        fi
+                        cd $dir
+                        if [ "${builtins.toString isOverwrite}" = "true" ]; then
+                          install -m ${mode} -o ${owner} -g ${group} $base/$target $dest_base/$target
+                        else
+                          cat $base/$target >> $dest_base/$target
+                          chown ${owner}:${group} $dest_base/$target
+                          chmod ${mode} $dest_base/$target
+                        fi
+                    ' {} \;
+                '';
+                scripts = map makeScript metas;
+                script = ''
+                    set -e
+                    set -u
 
-            osReleaseFile = with pkgs; writeTextDir "/etc/os-release" ''
-                ID=nix
-            '';
+                    ${lib.strings.concatMapStrings lib.id scripts}
+                '';
+            in writeShellScript name script;
+            
+            init-config = with pkgs; let
+            
+                metas = map makeFile [
+                    ({
+                        mode = "755";
+                        content = osReleaseFile;
+                        destination = "/etc/os-release";
+                    })
+                    ({
+                        content = globalStackConfigFile;
+                        destination = "/home/${user}/.stack/config.yaml";
+                        owner = "${user}";
+                        group = "${group}";
+                    })
+                    ({
+                        content = stackUserProfile;
+                        destination = "/home/${user}/.profile";
+                        isOverwrite = false;
+                        owner = "${user}";
+                        group = "${group}";
+                    })
+                    ({
+                        content = ghcupUserProfile;
+                        destination = "/home/${user}/.profile";
+                        isOverwrite = false;
+                        owner = "${user}";
+                        group = "${group}";
+                    })
+                    ({
+                        content = ghcupConfigFile;
+                        destination = "/home/${user}/.ghcup/config.yaml";
+                        owner = "${user}";
+                        group = "${group}";
+                    })
+                ];
 
-            os-release = with pkgs; buildEnv {
-                name = "os-release";
-                pathsToLink = [ "/etc" ];
-                paths = [ osReleaseFile ];
-            };
+            in writeInstallPathScript "init-config" metas;
 
             packages = with pkgs; [
                 bashInteractive
@@ -260,35 +328,23 @@
                 '';
             };
 
-            etc-profile = pkgs.buildEnv {
-                name = "env-usr-bin";
-                pathsToLink = [ ];
-                paths = with pkgs; [ ];
-                postBuild = with pkgs; ''
-                    mkdir -p $out/etc
-                    touch $out/etc/profile
-                '';
+            hoogle-cache = with pkgs; buildEnv {
+                name = "hoogle-cache";
+                pathsToLink = [ "/cache" ];
+                paths = [ hoogle-prefetch ];
             };
 
-            ghcup-profile = let
-                user-profile = 
-                    ''
-                        export PATH=~/.ghcup/bin:$PATH
-                    '';
-            in
-            with pkgs; buildEnv {
-                name = "ghcup-profile";
-                pathsToLink = [ ];
-                paths = [ ];
-                postBuild = with pkgs; ''
-                    mkdir -p $out/home/${user}
-                    cat > $out/home/${user}/.profile << 'EOF'
-                    ${user-profile}
-                    EOF
-                '';
+            hoogle-prefetch-image = pkgs.dockerTools.streamLayeredImage {
+                name = "hoogle-prefetch";
+                tag = "latest";
+                created = "now";
+
+                contents = [ 
+                    hoogle-cache
+                ];
             };
 
-            dockerImage = pkgs.dockerTools.streamLayeredImage {
+            base-nix-haskell-image = pkgs.dockerTools.streamLayeredImage {
                 name = "base-nix-haskell";
                 tag = "latest";
                 created = "now";
@@ -298,15 +354,13 @@
                     nix-ld-libraries
                     nix-ld-ldso
                     env-usr-bin # devcontainer script needs /usr/bin/env
-                    #etc-profile # devcontainer needs /etc/profile
-                    ghcup-profile
                     std-cacert-install
-                    os-release
-                ] ++ global-stack-config ++ packages;
+                ] ++ packages;
 
                 fakeRootCommands = ''
                   chown -R ${builtins.toString uid}:${builtins.toString gid} /home/${user}
                   chmod 755 /home/${user}
+                  ${init-config}
                 '';
 
                 enableFakechroot = true;
@@ -324,9 +378,10 @@
             };
         in 
         {
-            packages.x86_64-linux.default = dockerImage;
+            packages.x86_64-linux.default = base-nix-haskell-image;
             packages = {
-                test = dockerImage;
+                hoogle-prefetch = hoogle-prefetch-image;
+                base-nix-haskell = base-nix-haskell-image;
             };
         }
     );
